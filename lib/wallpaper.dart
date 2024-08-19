@@ -1,12 +1,12 @@
-// ignore_for_file: avoid_unnecessary_containers, prefer_const_constructors, unused_local_variable, prefer_interpolation_to_compose_strings
-
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:wallpaper_app/fullscreen.dart';
 
 class WallpaperScreen extends StatefulWidget {
-  const WallpaperScreen({super.key});
+  final VoidCallback toggleTheme;
+
+  const WallpaperScreen({super.key, required this.toggleTheme});
 
   @override
   State<WallpaperScreen> createState() => _WallpaperScreenState();
@@ -14,7 +14,11 @@ class WallpaperScreen extends StatefulWidget {
 
 class _WallpaperScreenState extends State<WallpaperScreen> {
   List images = [];
+  List categories = ["Nature", "Abstract", "Technology"];
   int page = 1;
+  bool isLoading = false;
+  String selectedCategory = "Nature";
+
   @override
   void initState() {
     super.initState();
@@ -22,7 +26,12 @@ class _WallpaperScreenState extends State<WallpaperScreen> {
   }
 
   fetchApi() async {
-    await http.get(Uri.parse('https://api.pexels.com/v1/curated?per_page=80'),
+    setState(() {
+      isLoading = true;
+    });
+    await http.get(
+        Uri.parse(
+            'https://api.pexels.com/v1/search?query=$selectedCategory&per_page=80'),
         headers: {
           'Authorization':
               'cSMyOIGQhS3NnUtCcBOJ9i3WTc20sjHXTPbScLtjha5XVEui3pBT6J7T'
@@ -30,6 +39,7 @@ class _WallpaperScreenState extends State<WallpaperScreen> {
       Map result = jsonDecode(value.body);
       setState(() {
         images = result['photos'];
+        isLoading = false;
       });
     });
   }
@@ -37,8 +47,9 @@ class _WallpaperScreenState extends State<WallpaperScreen> {
   loadMore() async {
     setState(() async {
       page = page + 1;
-      String Url = 'https://api.pexels.com/v1/curated?per_page=80&page=' +
-          page.toString();
+      String Url =
+          'https://api.pexels.com/v1/search?query=$selectedCategory&per_page=80&page=' +
+              page.toString();
       await http.get(Uri.parse(Url), headers: {
         'Authorization':
             'cSMyOIGQhS3NnUtCcBOJ9i3WTc20sjHXTPbScLtjha5XVEui3pBT6J7T'
@@ -54,41 +65,86 @@ class _WallpaperScreenState extends State<WallpaperScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Wallpapers'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.nightlight_round),
+            onPressed: widget.toggleTheme,
+          ),
+        ],
+      ),
       body: Column(
         children: [
-          Expanded(
-            child: Container(
-              child: GridView.builder(
-                itemCount: images.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisSpacing: 2,
-                    crossAxisCount: 3,
-                    childAspectRatio: 2 / 3,
-                    mainAxisSpacing: 2),
-                itemBuilder: (BuildContext context, index) {
-                  return InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => FullScreen(
-                            imageUrl: images[index]['src']['large2x'],
+          Container(
+            height: 50,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedCategory = categories[index];
+                      page = 1;
+                      fetchApi();
+                    });
+                  },
+                  child: Container(
+                    margin: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: selectedCategory == categories[index]
+                          ? Colors.black
+                          : Colors.grey,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Center(
+                      child: Text(
+                        categories[index],
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          isLoading
+              ? Center(child: CircularProgressIndicator())
+              : Expanded(
+                  child: GridView.builder(
+                    itemCount: images.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisSpacing: 2,
+                        crossAxisCount: 3,
+                        childAspectRatio: 2 / 3,
+                        mainAxisSpacing: 2),
+                    itemBuilder: (BuildContext context, index) {
+                      return InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FullScreen(
+                                imageUrl: images[index]['src']['large2x'],
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          color: Colors.white,
+                          child: Image.network(
+                            images[index]['src']['tiny'],
+                            fit: BoxFit.cover,
                           ),
                         ),
                       );
                     },
-                    child: Container(
-                      color: Colors.white,
-                      child: Image.network(
-                        images[index]['src']['tiny'],
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
+                  ),
+                ),
           InkWell(
             onTap: () {
               loadMore();
@@ -97,7 +153,6 @@ class _WallpaperScreenState extends State<WallpaperScreen> {
               height: 90,
               width: double.infinity,
               color: Colors.black,
-              // wrap text in centre not container
               child: Center(
                 child: Padding(
                   padding: EdgeInsets.only(bottom: 10),

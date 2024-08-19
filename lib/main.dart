@@ -1,9 +1,5 @@
-// ignore_for_file: prefer_const_constructors, 
-//avoid_web_libraries_in_flutter, avoid_print
-
-
 import 'package:flutter/material.dart';
-import 'package:wallpaper_app/wallpaper.dart';
+import 'package:wallpaper_app/splash_screen.dart';
 
 void main() => runApp(MyApp());
 
@@ -15,13 +11,14 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  
+  bool isDarkMode = true;
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(brightness: Brightness.dark),
-      home: WallpaperScreen(),
+      theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      home: SplashScreen(), // Set SplashScreen as the initial screen
     );
   }
 }
